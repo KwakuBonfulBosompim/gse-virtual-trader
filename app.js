@@ -1,23 +1,120 @@
 // --- Cloud Database Configuration Hub ---
-// Connected to your live GSE Equities Sheet
 const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTmHsSoHFg3NIEDhUW2FCQPfoM-OSaQqmhtO19JOGbGAOX8-9AHQYE-Aeg1JkaL3_l-wJVP_nMOqsQZ/pub?output=csv"; 
 
-// Default local structural baseline (Factoring in realistic valuations if connection fails)
-let marketData = [
-    { ticker: "MTNGH", name: "Scancom PLC (MTN)", price: 6.50, change: "-0.15%" },
-    { ticker: "GCB", name: "GCB Bank Limited", price: 35.25, change: "-2.08%" },
-    { ticker: "EGH", name: "Ecobank Ghana Limited", price: 48.00, change: "0.00%" },
-    { ticker: "TOTAL", name: "TotalEnergies Marketing Ghana", price: 33.00, change: "+1.15%" },
-    { ticker: "ACCESS", name: "Access Bank Ghana", price: 27.60, change: "+0.00%" }
-];
-
-// User account instance persistence (Utilizing local sandbox browser memory)
+let marketData = [];
 let userAccount = JSON.parse(localStorage.getItem('gse_trader_account')) || {
     cash: 50000.00,
-    holdings: {} // Format structure: { "MTNGH": { shares: 500, totalCost: 3250 } }
+    holdings: {}
 };
 
-const STATUTORY_FEE_RATE = 0.018; // 1.8% baseline transactional clearing levy per execution block
+const STATUTORY_FEE_RATE = 0.018; 
+
+// Master Sector & Name Mapping Dictionary
+const gseRegistry = {
+    "ACCESS": { name: "Access Bank Ghana PLC", sector: "Finance" },
+    "ADB": { name: "Agricultural Development Bank", sector: "Finance" },
+    "CAL": { name: "CalBank PLC", sector: "Finance" },
+    "EGH": { name: "Ecobank Ghana PLC", sector: "Finance" },
+    "ETI": { name: "Ecobank Transnational Inc.", sector: "Finance" },
+    "FAB": { name: "First Atlantic Bank PLC", sector: "Finance" },
+    "GCB": { name: "GCB Bank PLC", sector: "Finance" },
+    "MAC": { name: "Mega African Capital PLC", sector: "Finance" },
+    "RBGH": { name: "Republic Bank Ghana PLC", sector: "Finance" },
+    "SCB": { name: "Standard Chartered Bank Ghana", sector: "Finance" },
+    "SCBPREF": { name: "Stanchart Preference Shares", sector: "Finance" },
+    "SOGEGH": { name: "Societe Generale Ghana PLC", sector: "Finance" },
+    "TBL": { name: "Trust Bank Ltd (Gambia)", sector: "Finance" },
+    "CPC": { name: "Cocoa Processing Co. PLC", sector: "Food & Beverage" },
+    "FML": { name: "Fan Milk PLC", sector: "Food & Beverage" },
+    "GGBL": { name: "Guinness Ghana Breweries PLC", sector: "Food & Beverage" },
+    "HORDS": { name: "Hords PLC", sector: "Food & Beverage" },
+    "SAMBA": { name: "Samba Foods PLC", sector: "Food & Beverage" },
+    "CLYD": { name: "Clydestone Ghana PLC", sector: "ICT" },
+    "MTNGH": { name: "Scancom PLC (MTN Ghana)", sector: "ICT" },
+    "EGL": { name: "Enterprise Group PLC", sector: "Insurance" },
+    "SIC": { name: "SIC Insurance Company PLC", sector: "Insurance" },
+    "CMLT": { name: "Camelot Ghana PLC", sector: "Manufacturing" },
+    "DASPHARMA": { name: "Dannex Ayrton Starwin PLC", sector: "Manufacturing" },
+    "IIL": { name: "Intravenous Infusions Ltd", sector: "Manufacturing" },
+    "UNIL": { name: "Unilever Ghana PLC", sector: "Manufacturing" },
+    "ALW": { name: "Aluworks PLC", sector: "Manufacturing" },
+    "AADS": { name: "AngloGold Ashanti Depository", sector: "Mining & Energy" },
+    "AGA": { name: "AngloGold Ashanti PLC", sector: "Mining & Energy" },
+    "ALLGH": { name: "Atlantic Lithium Ltd", sector: "Mining & Energy" },
+    "ASG": { name: "Asante Gold Corporation", sector: "Mining & Energy" },
+    "TLW": { name: "Tullow Oil PLC", sector: "Mining & Energy" },
+    "TLWT": { name: "Tullow Oil PLC", sector: "Mining & Energy" },
+    "BOPP": { name: "Benso Oil Palm Plantation", sector: "Agriculture" },
+    "GOIL": { name: "Ghana Oil Company PLC", sector: "Distribution" },
+    "TOTAL": { name: "TotalEnergies Marketing Ghana", sector: "Distribution" },
+    "PBC": { name: "Produce Buying Company Ltd", sector: "Distribution" },
+    "GLD": { name: "NewGold ETF", sector: "Exchange Traded Funds" },
+    "MMH": { name: "Meridian Marshalls Holding", sector: "Education" },
+    "DIGICUT": { name: "Digicut Production & Adv.", sector: "Advertising" }
+};
+
+async function fetchMarketData() {
+    try {
+        const response = await fetch(GOOGLE_SHEET_CSV_URL);
+        const csvText = await response.text();
+        parseCSVData(csvText);
+    } catch (error) {
+        console.error("Database link error, running local baseline:", error);
+        useFallbackData();
+    }
+}
+
+function parseCSVData(csvText) {
+    const lines = csvText.split(/\r?\n/);
+    if (lines.length < 2) return useFallbackData();
+
+    const cleanMarketData = [];
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+    
+    const tickerIdx = headers.indexOf('ticker');
+    const priceIdx = headers.indexOf('price');
+    const changeIdx = headers.indexOf('change');
+
+    for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+        
+        const columns = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(c => c.replace(/^"|"$/g, '').trim());
+        
+        if (columns[tickerIdx]) {
+            // Strip out asterisks (e.g. PBC** becomes PBC)
+            let rawTicker = columns[tickerIdx].toUpperCase().replace(/\*/g, '');
+            let rawPrice = columns[priceIdx] ? columns[priceIdx].replace(/[^\d.-]/g, '') : "0";
+            let parsedPrice = parseFloat(rawPrice) || 0.00;
+
+            // Look up sector definitions from dictionary mapping
+            const registryLookup = gseRegistry[rawTicker] || { name: columns[headers.indexOf('name')] || "Listed Asset", sector: "Unclassified" };
+
+            cleanMarketData.push({
+                ticker: rawTicker,
+                name: registryLookup.name,
+                sector: registryLookup.sector,
+                price: parsedPrice,
+                change: columns[changeIdx] || "0.00%"
+            });
+        }
+    }
+
+    if (cleanMarketData.length > 0) {
+        // Sort alphabetically by sector name
+        marketData = cleanMarketData.sort((a, b) => a.sector.localeCompare(b.sector));
+        updateUI();
+    } else {
+        useFallbackData();
+    }
+}
+
+function useFallbackData() {
+    marketData = [
+        { ticker: "MTNGH", name: "Scancom PLC (MTN Ghana)", sector: "ICT", price: 2.35, change: "+0.43%" },
+        { ticker: "GCB", name: "GCB Bank PLC", sector: "Finance", price: 5.90, change: "-1.10%" }
+    ];
+    updateUI();
+}
 
 function saveAccount() {
     localStorage.setItem('gse_trader_account', JSON.stringify(userAccount));
@@ -25,34 +122,42 @@ function saveAccount() {
 }
 
 function updateUI() {
-    // Refresh Account Balances
     document.getElementById('cash-display').innerText = `GHS ${userAccount.cash.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
     
-    // Refresh Tables and Selections
     const marketTable = document.getElementById('market-table');
     const stockSelect = document.getElementById('stock-select');
+    
+    if(!marketTable || !stockSelect) return;
+    
     marketTable.innerHTML = "";
     stockSelect.innerHTML = "";
 
     let totalPortfolioValue = 0;
+    let currentSector = "";
 
-// This loop runs automatically through your Google Sheet data
-marketData.forEach(stock => {
-    // 1. It adds the stock to the Live Board Table
-    marketTable.innerHTML += `
-        <tr>
-            <td><strong>${stock.ticker}</strong></td>
-            <td>${stock.name}</td>
-            <td>GHS ${stock.price.toFixed(2)}</td>
-            <td class="${changeClass}">${stock.change}</td>
-        </tr>
-    `;
-    
-    // 2. IT INJECTS THE STOCK DIRECTLY INTO YOUR DROPDOWN TERMINAL:
-    stockSelect.innerHTML += `<option value="${stock.ticker}">${stock.ticker} (GHS ${stock.price.toFixed(2)})</option>`;
-});
+    marketData.forEach(stock => {
+        // Inject visual category breakdown separator bars
+        if (stock.sector !== currentSector) {
+            currentSector = stock.sector;
+            marketTable.innerHTML += `
+                <tr style="background-color: #e2e8f0; font-weight: bold;">
+                    <td colspan="4" style="color: #475569; padding: 6px 12px; font-size: 11px; tracking-spacing: 1px;">SECTION: ${currentSector.toUpperCase()}</td>
+                </tr>
+            `;
+        }
+
+        const changeClass = stock.change.startsWith("+") ? "positive" : stock.change.startsWith("-") ? "negative" : "";
+        marketTable.innerHTML += `
+            <tr>
+                <td><strong>${stock.ticker}</strong></td>
+                <td>${stock.name}</td>
+                <td>GHS ${stock.price.toFixed(2)}</td>
+                <td class="${changeClass}">${stock.change}</td>
+            </tr>
+        `;
         
-        // Aggregate open portfolio position metrics
+        stockSelect.innerHTML += `<option value="${stock.ticker}">${stock.ticker} - ${stock.name} (GHS ${stock.price.toFixed(2)})</option>`;
+        
         if(userAccount.holdings[stock.ticker]) {
             totalPortfolioValue += userAccount.holdings[stock.ticker].shares * stock.price;
         }
@@ -60,20 +165,18 @@ marketData.forEach(stock => {
 
     document.getElementById('portfolio-display').innerText = `GHS ${totalPortfolioValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
 
-    // Re-rendering User Asset Table
     const holdingsTable = document.getElementById('holdings-table');
     holdingsTable.innerHTML = "";
     
     const heldAssets = Object.keys(userAccount.holdings).filter(t => userAccount.holdings[t].shares > 0);
     
     if(heldAssets.length === 0) {
-        holdingsTable.innerHTML = `<tr><td colspan="5" style="color: #64748b; text-align: center; padding: 20px;">No active open positions. Execute a buy order above to start practicing.</td></tr>`;
+        holdingsTable.innerHTML = `<tr><td colspan="5" style="color: #64748b; text-align: center; padding: 20px;">No open positions. Use the terminal selection menu to trade.</td></tr>`;
     } else {
         heldAssets.forEach(ticker => {
             const holding = userAccount.holdings[ticker];
             const marketStock = marketData.find(s => s.ticker === ticker);
             
-            // Safety handler if market ticker modifications occur
             if (!marketStock) return;
 
             const valuation = holding.shares * marketStock.price;
@@ -99,16 +202,18 @@ function executeTrade() {
     const ticker = document.getElementById('stock-select').value;
     const qty = parseInt(document.getElementById('share-quantity').value);
     
-    if(!qty || qty <= 0) return alert("Validation Error: Please specify a valid positive share volume.");
+    if(!qty || qty <= 0) return alert("Please specify a valid share volume.");
     
     const targetStock = marketData.find(s => s.ticker === ticker);
+    if (!targetStock) return alert("System tracking mismatch error.");
+    
     const principalValue = qty * targetStock.price;
     const dynamicLevies = principalValue * STATUTORY_FEE_RATE;
 
     if (direction === "BUY") {
         const aggregatedCost = principalValue + dynamicLevies;
         if(aggregatedCost > userAccount.cash) {
-            return alert(`Order Rejected: Insufficient liquidity. Total transaction cost is GHS ${aggregatedCost.toFixed(2)} (including clearing fees).`);
+            return alert(`Insufficient cash. Total cost is GHS ${aggregatedCost.toFixed(2)} (including 1.8% transaction clearing fees).`);
         }
         
         userAccount.cash -= aggregatedCost;
@@ -120,21 +225,18 @@ function executeTrade() {
     } 
     else if (direction === "SELL") {
         if(!userAccount.holdings[ticker] || userAccount.holdings[ticker].shares < qty) {
-            return alert("Order Rejected: Market execution denied due to insufficient asset inventory balances.");
+            return alert("Order Rejected: Insufficient inventory balance.");
         }
         const netCashLiquidation = principalValue - dynamicLevies;
         userAccount.cash += netCashLiquidation;
         
-        // Scaled cost basis decrement logic
         const historicCostPerShare = userAccount.holdings[ticker].totalCost / userAccount.holdings[ticker].shares;
         userAccount.holdings[ticker].shares -= qty;
         userAccount.holdings[ticker].totalCost -= (historicCostPerShare * qty);
     }
 
-    // Resetting Inputs and Saving State
     document.getElementById('share-quantity').value = "";
     saveAccount();
 }
 
-// Initial Core Run Environment
-updateUI();
+fetchMarketData();
