@@ -36,20 +36,21 @@ function updateUI() {
 
     let totalPortfolioValue = 0;
 
-    marketData.forEach(stock => {
-        // Appending Interactive Rows to Live Board
-        const changeClass = stock.change.startsWith("+") ? "positive" : stock.change.startsWith("-") ? "negative" : "";
-        marketTable.innerHTML += `
-            <tr>
-                <td><strong>${stock.ticker}</strong></td>
-                <td>${stock.name}</td>
-                <td>GHS ${stock.price.toFixed(2)}</td>
-                <td class="${changeClass}">${stock.change}</td>
-            </tr>
-        `;
-        
-        // Appending Ticker Options to Dropdown Menu
-        stockSelect.innerHTML += `<option value="${stock.ticker}">${stock.ticker} (GHS ${stock.price.toFixed(2)})</option>`;
+// This loop runs automatically through your Google Sheet data
+marketData.forEach(stock => {
+    // 1. It adds the stock to the Live Board Table
+    marketTable.innerHTML += `
+        <tr>
+            <td><strong>${stock.ticker}</strong></td>
+            <td>${stock.name}</td>
+            <td>GHS ${stock.price.toFixed(2)}</td>
+            <td class="${changeClass}">${stock.change}</td>
+        </tr>
+    `;
+    
+    // 2. IT INJECTS THE STOCK DIRECTLY INTO YOUR DROPDOWN TERMINAL:
+    stockSelect.innerHTML += `<option value="${stock.ticker}">${stock.ticker} (GHS ${stock.price.toFixed(2)})</option>`;
+});
         
         // Aggregate open portfolio position metrics
         if(userAccount.holdings[stock.ticker]) {
