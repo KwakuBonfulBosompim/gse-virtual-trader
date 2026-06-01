@@ -59,7 +59,7 @@ async function fetchMarketData() {
         const csvText = await response.text();
         parseCSVData(csvText);
     } catch (error) {
-        console.error("Database link error, running local baseline:", error);
+        console.error("Database connection failure:", error);
         useFallbackData();
     }
 }
@@ -75,27 +75,38 @@ function parseCSVData(csvText) {
     const priceIdx = headers.indexOf('price');
     const changeIdx = headers.indexOf('change');
 
+    // List of words to skip if they appear in your ticker column
+    const badRowsFilter = ["AVERAGE", "FINANCE", "FOOD AND BEVERAGE", "ICT", "INSURANCE", "MANUFACTURING", "MINING", "AGRICULTURE", "DISTRIBUTION", "EXCHANGE TRADED FUNDS", "EDUCATION", "ADV. & PRODUCTION", "LIST OF GSE"];
+
     for (let i = 1; i < lines.length; i++) {
         if (!lines[i].trim()) continue;
         
         const columns = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(c => c.replace(/^"|"$/g, '').trim());
         
         if (columns[tickerIdx]) {
-            // Strip out asterisks (e.g. PBC** becomes PBC)
-            let rawTicker = columns[tickerIdx].toUpperCase().replace(/\*/g, '');
-            let rawPrice = columns[priceIdx] ? columns[priceIdx].replace(/[^\d.-]/g, '') : "0";
-            let parsedPrice = parseFloat(rawPrice) || 0.00;
+            let rawTicker = columns[tickerIdx].toUpperCase().replace(/\*/g, '').trim();
+            
+            // SECURITY FILTER: Skip calculations, label headers, or empty/zero placeholder rows
+            if (badRowsFilter.includes(rawTicker) || rawTicker === "" || columns[priceIdx] === "#DIV/0!") {
+                continue; 
+            }
 
-            // Look up sector definitions from dictionary mapping
-            const registryLookup = gseRegistry[rawTicker] || { name: columns[headers.indexOf('name')] || "Listed Asset", sector: "Unclassified" };
+            // Only map tickers explicitly defined in our official registry dictionary
+            if (gseRegistry[rawTicker]) {
+                let rawPrice = columns[priceIdx] ? columns[priceIdx].replace(/[^\d.-]/g, '') : "0";
+                let parsedPrice = parseFloat(rawPrice) || 0.00;
 
-            cleanMarketData.push({
-                ticker: rawTicker,
-                name: registryLookup.name,
-                sector: registryLookup.sector,
-                price: parsedPrice,
-                change: columns[changeIdx] || "0.00%"
-            });
+                // Skip rows that failed to load real values
+                if (parsedPrice === 0) continue;
+
+                cleanMarketData.push({
+                    ticker: rawTicker,
+                    name: gseRegistry[rawTicker].name,
+                    sector: gseRegistry[rawTicker].sector,
+                    price: parsedPrice,
+                    change: columns[changeIdx] || "0.00%"
+                });
+            }
         }
     }
 
@@ -110,8 +121,8 @@ function parseCSVData(csvText) {
 
 function useFallbackData() {
     marketData = [
-        { ticker: "MTNGH", name: "Scancom PLC (MTN Ghana)", sector: "ICT", price: 2.35, change: "+0.43%" },
-        { ticker: "GCB", name: "GCB Bank PLC", sector: "Finance", price: 5.90, change: "-1.10%" }
+        { ticker: "MTNGH", name: "Scancom PLC (MTN Ghana)", sector: "ICT", price: 4.34, change: "-0.02%" },
+        { ticker: "GCB", name: "GCB Bank PLC", sector: "Finance", price: 15.62, change: "+0.02%" }
     ];
     updateUI();
 }
@@ -136,22 +147,26 @@ function updateUI() {
     let currentSector = "";
 
     marketData.forEach(stock => {
-        // Inject visual category breakdown separator bars
+        // REMOVED "SECTION:" WORDING: Injects clean header rows dynamically
         if (stock.sector !== currentSector) {
             currentSector = stock.sector;
             marketTable.innerHTML += `
-                <tr style="background-color: #e2e8f0; font-weight: bold;">
-                    <td colspan="4" style="color: #475569; padding: 6px 12px; font-size: 11px; tracking-spacing: 1px;">SECTION: ${currentSector.toUpperCase()}</td>
+                <tr style="background-color: #0d1b2a; font-weight: bold;">
+                    <td colspan="4" style="color: #ffffff; padding: 8px 12px; font-size: 12px; letter-spacing: 0.5px;">${currentSector.toUpperCase()}</td>
                 </tr>
             `;
         }
 
         const changeClass = stock.change.startsWith("+") ? "positive" : stock.change.startsWith("-") ? "negative" : "";
+        
+        // Show prices cleanly formatted with currency symbols
+        let displayPrice = stock.price > 0 ? `GHS ${stock.price.toFixed(2)}` : "GHS 0.00";
+
         marketTable.innerHTML += `
             <tr>
                 <td><strong>${stock.ticker}</strong></td>
                 <td>${stock.name}</td>
-                <td>GHS ${stock.price.toFixed(2)}</td>
+                <td>${displayPrice}</td>
                 <td class="${changeClass}">${stock.change}</td>
             </tr>
         `;
