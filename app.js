@@ -1,8 +1,8 @@
-// --- Cloud Database Configuration Strategy ---
-// If you configure a public Google Sheet CSV publishing pipeline, paste the export URL inside the quotes below
-const GOOGLE_SHEET_CSV_URL = ""; 
+// --- Cloud Database Configuration Hub ---
+// Connected to your live GSE Equities Sheet
+const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTmHsSoHFg3NIEDhUW2FCQPfoM-OSaQqmhtO19JOGbGAOX8-9AHQYE-Aeg1JkaL3_l-wJVP_nMOqsQZ/pub?output=csv"; 
 
-// Default local structural baseline (Factoring in realistic valuations)
+// Default local structural baseline (Factoring in realistic valuations if connection fails)
 let marketData = [
     { ticker: "MTNGH", name: "Scancom PLC (MTN)", price: 6.50, change: "-0.15%" },
     { ticker: "GCB", name: "GCB Bank Limited", price: 35.25, change: "-2.08%" },
