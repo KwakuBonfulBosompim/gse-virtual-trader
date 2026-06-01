@@ -3,46 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GSE Virtual Trader Dashboard</title>
+    <title>GSE Virtual Trader & Regulatory Portal</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background-color: #f4f6f9; color: #333; }
         header { background-color: #0d1b2a; color: white; padding: 20px; text-align: center; }
-        .container { max-width: 1100px; margin: 30px auto; padding: 0 20px; }
+        .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
         .grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
         .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        h2 { margin-top: 0; color: #0d1b2a; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; }
+        h2 { margin-top: 0; color: #0d1b2a; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; font-size: 18px; }
         table { width: 100%; border-collapse: collapse; text-align: left; }
-        th, td { padding: 12px; border-bottom: 1px solid #e2e8f0; }
+        th, td { padding: 12px; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
         th { background-color: #f8fafc; color: #64748b; }
-        .btn { background-color: #10b981; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; }
+        .btn { background-color: #10b981; color: white; border: none; padding: 12px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; font-size: 14px; }
         .btn:hover { background-color: #059669; }
         input, select { width: 100%; padding: 10px; margin: 8px 0 15px 0; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; }
         .positive { color: #10b981; font-weight: bold; }
         .negative { color: #ef4444; font-weight: bold; }
+        
+        /* Portal Link Styling */
+        .portal-link { 
+            display: block; 
+            color: #1e293b; 
+            text-decoration: none; 
+            font-weight: 500; 
+            font-size: 13.5px;
+            padding: 8px 10px;
+            background-color: #f8fafc;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+        .portal-link:hover { background-color: #f1f5f9; transform: translateX(3px); }
+        .reg-border { border-left: 3px solid #10b981; }
+        .mkt-border { border-left: 3px solid #3b82f6; }
     </style>
 </head>
 <body>
 
     <header>
         <h1>GSE Virtual Trading Platform</h1>
-        <p>Practice trading real Ghanaian assets with zero financial risk.</p>
+        <p>Practice trading real-world Ghanaian assets with zero financial risk.</p>
     </header>
 
     <div class="container">
-        <!-- Balance Overview -->
-        <div class="card" style="display: flex; justify-content: space-between; align-items: center;">
+        <!-- Balance Dashboard Header Component -->
+        <div class="card" style="display: flex; justify-content: space-between; align-items: center; border-top: 4px solid #0d1b2a;">
             <div>
-                <span style="color: #64748b; font-size: 14px;">VIRTUAL CASH BALANCE</span>
+                <span style="color: #64748b; font-size: 13px; font-weight: 600; tracking-spacing: 0.5px;">VIRTUAL CASH BALANCE</span>
                 <h2 id="cash-display" style="margin: 5px 0 0 0; border: none; font-size: 28px; color: #0d1b2a;">GHS 50,000.00</h2>
             </div>
             <div style="text-align: right;">
-                <span style="color: #64748b; font-size: 14px;">PORTFOLIO VALUE</span>
+                <span style="color: #64748b; font-size: 13px; font-weight: 600; tracking-spacing: 0.5px;">PORTFOLIO VALUE</span>
                 <h2 id="portfolio-display" style="margin: 5px 0 0 0; border: none; font-size: 28px; color: #10b981;">GHS 0.00</h2>
             </div>
         </div>
 
         <div class="grid">
-            <!-- Market & Open Positions Left Side -->
+            <!-- Left Layout Grid: Market Data Tables -->
             <div>
                 <div class="card">
                     <h2>Live Market Board (GSE)</h2>
@@ -56,8 +72,7 @@
                             </tr>
                         </thead>
                         <tbody id="market-table">
-                            <!-- Data injected dynamically by app.js -->
-                            <tr><td colspan="4">Loading live sheet data...</td></tr>
+                            <tr><td colspan="4">Initialising live cloud connections...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -69,39 +84,60 @@
                             <tr>
                                 <th>Ticker</th>
                                 <th>Shares Held</th>
-                                <th>Avg Cost</th>
-                                <th>Current Value</th>
-                                <th>Return</th>
+                                <th>Avg Cost Basis</th>
+                                <th>Current Valuation</th>
+                                <th>Net Return</th>
                             </tr>
                         </thead>
                         <tbody id="holdings-table">
-                            <tr><td colspan="5" style="color: #64748b;">No open positions. Use the terminal to buy stocks.</td></tr>
+                            <tr><td colspan="5" style="color: #64748b; text-align: center;">No open positions. Use the terminal execution module to place mock orders.</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- Execution Terminal Right Side -->
+            <!-- Right Layout Grid: Tools & External Infrastructure Links -->
             <div>
+                <!-- Order Execution Terminal -->
                 <div class="card">
-                    <h2>Order Execution</h2>
+                    <h2>Order Execution Terminal</h2>
                     <form id="order-form">
-                        <label for="action-type">Action</label>
+                        <label for="action-type" style="font-size: 13px; font-weight: 600; color: #475569;">Transaction Direction</label>
                         <select id="action-type">
                             <option value="BUY">BUY</option>
                             <option value="SELL">SELL</option>
                         </select>
 
-                        <label for="stock-select">Select Asset</label>
+                        <label for="stock-select" style="font-size: 13px; font-weight: 600; color: #475569;">Select Asset Ticker</label>
                         <select id="stock-select">
-                            <!-- Dynamic options -->
+                            <!-- Injected dynamically by execution script -->
                         </select>
 
-                        <label for="share-quantity">Number of Shares</label>
-                        <input type="number" id="share-quantity" min="1" placeholder="e.g. 500">
+                        <label for="share-quantity" style="font-size: 13px; font-weight: 600; color: #475569;">Volume (Share Quantity)</label>
+                        <input type="number" id="share-quantity" min="1" placeholder="e.g. 1000">
 
                         <button type="button" class="btn" onclick="executeTrade()">Submit Simulated Order</button>
                     </form>
+                </div>
+
+                <!-- Market Infrastructure Portal (External Links Module) -->
+                <div class="card">
+                    <h2>Market Infrastructure Portal</h2>
+                    <p style="font-size: 12.5px; color: #64748b; margin-top: -5px; margin-bottom: 15px;">Access official financial registries, legislative acts, and monetary market tracking hubs.</p>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <span style="font-size: 11px; font-weight: 700; color: #94a3b8; margin-top: 5px;">REGULATORS & AUTHORITIES</span>
+                        <a href="https://sec.gov.gh" target="_blank" rel="noopener noreferrer" class="portal-link reg-border">Securities and Exchange Commission (SEC)</a>
+                        <a href="https://www.bog.gov.gh" target="_blank" rel="noopener noreferrer" class="portal-link reg-border">Bank of Ghana (BoG)</a>
+                        <a href="https://mofep.gov.gh" target="_blank" rel="noopener noreferrer" class="portal-link reg-border">Ministry of Finance (MoF)</a>
+                        <a href="https://npra.gov.gh" target="_blank" rel="noopener noreferrer" class="portal-link reg-border">National Pensions Regulatory Authority (NPRA)</a>
+                        <a href="https://fic.gov.gh" target="_blank" rel="noopener noreferrer" class="portal-link reg-border">Financial Intelligence Centre (FIC)</a>
+                        
+                        <span style="font-size: 11px; font-weight: 700; color: #94a3b8; margin-top: 10px;">MARKET OPERATORS & VEHICLES</span>
+                        <a href="https://gse.com.gh" target="_blank" rel="noopener noreferrer" class="portal-link mkt-border">Ghana Stock Exchange (GSE)</a>
+                        <a href="https://gse.com.gh/gfim/" target="_blank" rel="noopener noreferrer" class="portal-link mkt-border">Ghana Fixed Income Market (GFIM)</a>
+                        <a href="https://eslaplc.com" target="_blank" rel="noopener noreferrer" class="portal-link mkt-border">ESLA Plc (Energy Debt Vehicles)</a>
+                    </div>
                 </div>
             </div>
         </div>
