@@ -1,0 +1,16 @@
+{
+  "short_name": "GSETrader",
+  "name": "GSE Virtual Trading Simulator",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2422/2422796.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "./index.html",
+  "background_color": "#0d1b2a",
+  "theme_color": "#0d1b2a",
+  "display": "standalone",
+  "orientation": "portrait"
+}
